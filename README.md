@@ -11,3 +11,8 @@ Current list of programs:
 
 
 
+# Installation
+
+It is currently not packaged, but only requires you to clone this repository and run `make install` in the repository directory.
+
+
