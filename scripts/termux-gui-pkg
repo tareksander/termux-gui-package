@@ -1,0 +1,219 @@
+#!/usr/bin/env python3
+
+import sys
+import time
+import subprocess
+import os
+from math import ceil
+import re
+
+try:
+	import termuxgui as tg
+except ModuleNotFoundError:
+	sys.exit("termuxgui module not found. Please install the Termux:GUI python bindings: https://github.com/tareksander/termux-gui-python-bindings")
+ 
+
+
+ret = tg.connect()
+if ret == None:
+    sys.exit("Could not connect to the plugin")
+main, event = ret
+
+
+PAGESIZE = 30
+
+
+
+
+
+a, t = tg.activity(main)
+
+root = tg.createlinearlayout(main, a)
+
+bar = tg.createlinearlayout(main, a, root, False)
+tg.setlinearlayoutparams(main, a, bar, 0)
+tg.setheight(main, a, bar, "WRAP_CONTENT")
+
+upgrade = tg.createbutton(main, a, "upgrade", bar)
+tg.setheight(main, a, upgrade, "WRAP_CONTENT")
+
+apply = tg.createbutton(main, a, "apply", bar)
+tg.setheight(main, a, apply, "WRAP_CONTENT")
+
+
+filterlayout = tg.createlinearlayout(main, a, root, False)
+tg.setheight(main, a, filterlayout, "WRAP_CONTENT")
+tg.setlinearlayoutparams(main, a, filterlayout, 0)
+
+filtertext = tg.createedittext(main, a, "", filterlayout, True)
+
+filterbutton = tg.createbutton(main, a, "filter", filterlayout)
+tg.setwidth(main, a, filterbutton, "WRAP_CONTENT")
+tg.setlinearlayoutparams(main, a, filterbutton, 0)
+
+
+
+
+bar2 = tg.createlinearlayout(main, a, root, False)
+tg.setlinearlayoutparams(main, a, bar2, 0)
+tg.setheight(main, a, bar2, "WRAP_CONTENT")
+
+installbox = tg.createcheckbox(main, a, "install", True, bar2)
+tg.setheight(main, a, installbox, "WRAP_CONTENT")
+tg.setlinearlayoutparams(main, a, installbox, 0)
+tg.setmargin(main, a, installbox, 30, "right")
+
+
+prevpage = tg.createbutton(main, a, "-", bar2)
+tg.setwidth(main, a, prevpage, "WRAP_CONTENT")
+tg.setlinearlayoutparams(main, a, prevpage, 0)
+
+page = tg.createtextview(main, a, "0/", bar2)
+tg.setwidth(main, a, page, "WRAP_CONTENT")
+tg.setlinearlayoutparams(main, a, page, 0)
+tg.setmargin(main, a, page, 5)
+
+nextpage = tg.createbutton(main, a, "+", bar2)
+tg.setwidth(main, a, nextpage, "WRAP_CONTENT")
+tg.setlinearlayoutparams(main, a, nextpage, 0)
+
+
+
+
+
+packages = tg.createlinearlayout(main, a, root, False)
+tg.setlinearlayoutparams(main, a, packages, 3)
+tg.setheight(main, a, packages, 0)
+tg.setmargin(main, a, packages, 10, "top")
+
+availablescroll = tg.createnestedscrollview(main, a, packages)
+tg.setwidth(main, a, availablescroll, 0)
+
+available = tg.createlinearlayout(main, a, availablescroll)
+
+
+selectedscroll = tg.createnestedscrollview(main, a, packages)
+tg.setwidth(main, a, selectedscroll, 0)
+
+selected = tg.createlinearlayout(main, a, selectedscroll)
+
+
+cpage = 1
+
+infos = tg.createnestedscrollview(main, a, root)
+tg.setheight(main, a, infos, 0)
+tg.setmargin(main, a, infos, 5, "top")
+infostext = tg.createtextview(main, a, "", infos)
+
+
+pkglist=[]
+selectedpkg=[]
+selectedids=[]
+
+install=True
+
+def update():
+    global pkglist
+    ls = ""
+    if install:
+        ls = subprocess.check_output(["(apt-cache pkgnames; apt-mark showmanual; apt-mark showauto) | sort | uniq -u"], shell=True,stderr=subprocess.DEVNULL).decode("ascii")
+    else:
+        ls = subprocess.check_output(["apt-mark showmanual | sort"], shell=True,stderr=subprocess.DEVNULL).decode("ascii")
+    pkglist=ls.splitlines()
+update()
+
+
+def displaypage(p):
+    global cpage
+    cpage = p
+    tg.settext(main, a, page, f"{p}/{ceil(len(pkglist)/PAGESIZE)}")
+    tg.clearchildren(main, a, available)
+    l = pkglist[p*PAGESIZE-PAGESIZE:p*PAGESIZE]
+    for p in l:
+        tg.createbutton(main, a, p, available)
+displaypage(1)
+
+
+
+def closeconnection():
+    main.close()
+    event.close()
+
+
+
+def showinfo(pkg):
+    tg.settext(main, a, infostext, subprocess.check_output(["apt", "show", pkg],stderr=subprocess.DEVNULL).decode("ascii"))
+
+
+
+
+while True:
+    ev = tg.getevent(event)
+    if ev["type"] == "destroy" and ev["value"]["finishing"]:
+        tg.totermux()
+        sys.exit()
+    if ev["type"] == "click" and ev["value"]["id"] == installbox:
+        install = ev["value"]["set"]
+        update()
+        tg.clearchildren(main, a, selected)
+        selectedpkg=[]
+        selectedids=[]
+        displaypage(1)
+        continue
+    if ev["type"] == "click" and ev["value"]["id"] == prevpage:
+        if cpage > 1:
+            displaypage(cpage-1)
+        continue
+    if ev["type"] == "click" and ev["value"]["id"] == nextpage:
+        if cpage < ceil(len(pkglist)/PAGESIZE):
+            displaypage(cpage+1)
+        continue
+    if ev["type"] == "click" and ev["value"]["id"] == upgrade:
+        tg.totermux()
+        closeconnection()
+        os.execlp("pkg", "pkg", "upgrade")
+        continue
+    if ev["type"] == "click" and ev["value"]["id"] == filterbutton:
+        update()
+        text = tg.gettext(main, a, filtertext)
+        r = re.compile("^"+text)
+        pkglist = list(filter(lambda p: r.match(p) , pkglist))
+        displaypage(1)
+        continue
+    if ev["type"] == "click" and ev["value"]["id"] == apply:
+        if len(selectedpkg) != 0:
+            tg.totermux()
+            closeconnection()
+            if install:
+                selectedpkg.insert(0,"install")
+            else:
+                selectedpkg.insert(0,"uninstall")
+            selectedpkg.insert(0,"pkg")
+            print(" ".join(selectedpkg))
+            sys.stdout.flush()
+            os.execvp("pkg", selectedpkg)
+        continue
+    if ev["type"] == "click":
+        pkg = tg.gettext(main, a, ev["value"]["id"])
+        if ev["value"]["id"] in selectedids:
+            selectedids.remove(ev["value"]["id"])
+            selectedpkg.remove(pkg)
+            tg.deleteview(main, a, ev["value"]["id"])
+            continue
+        if pkg in pkglist:
+            if pkg not in selectedpkg:
+                selectedids.append(tg.createbutton(main, a, pkg, selected))
+                selectedpkg.append(pkg)
+                showinfo(pkg)
+        
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    

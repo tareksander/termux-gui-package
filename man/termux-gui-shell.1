@@ -1,0 +1,21 @@
+.TH TERMUX-GUI-SHELL 1 2021-11-08 
+.SH NAME
+termux-gui-shell \- use Termux:GUI from a command line script
+.SH DESCRIPTION
+.BR termux-gui-shell
+can be used to connect to Termux:GUI from a shell script.
+It accepts one-line JSON object from stdin and outputs responses to stdout and events to stderr.
+To format a message you can use
+.RS
+jq -c -n --args ARG1 ... '{PROPERTY1: $ARG1, PROPERTY2: $ARG2...}'
+.RE
+For the format itself see
+.RS
+https://github.com/tareksander/termux-gui/blob/main/Protocol.md#json-protocol
+.RE
+
+
+
+
+
+

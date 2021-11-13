@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+
+import sys 
+import argparse
+import io
+import time
+import threading
+
+try:
+	import termuxgui as tg
+except ModuleNotFoundError:
+	sys.exit("termuxgui module not found. Please install the Termux:GUI python bindings: https://github.com/tareksander/termux-gui-python-bindings")
+
+pilfound = False
+
+try:
+	from PIL import Image
+	pilfound = True
+except ModuleNotFoundError:
+	print("Could not find PIL. If you want support for more file types, please install pillow with pip install pillow. If you have a 64bit device, use export LDFLAGS=\"-L/system/lib64\" before that.")
+
+parser = argparse.ArgumentParser(description="View images in a picture-in-picture window.\nYou should probably make a shell alias with all the options you want configured.")
+parser.add_argument("file", nargs="+", type=argparse.FileType('rb'), help="The files you want to view. If more than one, they are displayed after each other.")
+parser.add_argument("-n", type=float, default=5.0, help="The time in seconds each image should be shown. The default is 5.")
+parser.add_argument("--return", dest="ret", default=True, action=argparse.BooleanOptionalAction, help="Use this if you don't want the program to return to Termux after all images are displayed.")
+parser.add_argument("--exit", default=True, action=argparse.BooleanOptionalAction, help="Use this if you want to quit the viewer as soon as it isn't visible anymore.")
+
+
+
+args = parser.parse_args()
+
+
+ret = tg.connect()
+if ret == None:
+    sys.exit("Could not connect to the plugin")
+main, event = ret
+
+a, t = tg.activity(main, pip=True)
+iv = tg.createimageview(main, a)
+
+send = True
+
+def display():
+	global args
+	global pilfound
+	global a
+	try:
+		if pilfound:
+			b = io.BytesIO()
+			for file in args.file:
+				with file:
+					with Image.open(file) as img:
+						tg.setpipparams(main, a, img.width, img.height)
+						for frame in range(0, img.n_frames):
+							ftime = time.time()
+							if send:
+								b.seek(0)
+								img.seek(frame)
+								f = img.convert('RGB')
+								f.save(b, "png")
+								b.seek(0)
+								tg.setimage(main, a, iv, b.read())
+							ftime2 = time.time()
+							if 'duration' in img.info:
+								time.sleep(max(0, (img.info['duration']-(ftime2-ftime)*1000)/1000))
+							else:
+								time.sleep(args.n)
+		else:
+			for f in args.file:
+				with f:
+					tg.setimage(main, a, iv, f.read())
+				time.sleep(args.n)
+	finally:
+		tg.finishactivity(main, a)
+		if args.ret:
+			tg.totermux()
+
+
+displayer = threading.Thread(target=display, daemon=True)
+displayer.start()
+
+while True:
+	ev = tg.getevent(event)
+	if ev["type"] == "destroy" and ev["value"]["finishing"]:
+		if args.ret:
+			tg.totermux()
+		sys.exit()
+	if ev["type"] == "stop":
+		send = False
+		if args.e:
+			if args.ret:
+				tg.totermux()
+			sys.exit()
+	if ev["type"] == "start":
+		send = True
+	if ev["type"] == "UserLeaveHint":
+		tg.setpipmode(main, a, True)
