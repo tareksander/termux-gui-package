@@ -5,37 +5,32 @@ import threading
 
 try:
 	import termuxgui as tg
+	import termuxgui.msg as tgmsg
 except ModuleNotFoundError:
 	sys.exit("termuxgui module not found. Please install the Termux:GUI python bindings: https://github.com/tareksander/termux-gui-python-bindings")
 
 
-
-ret = tg.connect()
-if ret == None:
-    sys.exit("Could not connect to the plugin")
-main, event = ret
-
-
-def handleEvents():
-	global event
-	while True:
-		msg = tg.__read_msg.__read_msg(event)
-		print(json.dumps(msg), file=sys.stderr, flush=True)
-
-
-def handleOutput():
-	global main
-	while True:
-		msg = tg.__read_msg.__read_msg(main)
-		print(json.dumps(msg), flush=True)
-
-
-eventt = threading.Thread(target=handleEvents,daemon=True)
-outt = threading.Thread(target=handleOutput,daemon=True)
-eventt.start()
-outt.start()
-
-
-while True:
-	tg.__send_msg.__send_msg(main, sys.stdin.readline())
-
+with tg.Connection() as c:
+    
+    def handleEvents():
+        global event
+        while True:
+            msg = tgmsg.read_msg(c._event)
+            print(json.dumps(msg), file=sys.stderr, flush=True)
+    
+    
+    def handleOutput():
+        global main
+        while True:
+            msg = tgmsg.read_msg(c._main)
+            print(json.dumps(msg), flush=True)
+    
+    
+    eventt = threading.Thread(target=handleEvents,daemon=True)
+    outt = threading.Thread(target=handleOutput,daemon=True)
+    eventt.start()
+    outt.start()
+    
+    
+    while True:
+        tgmsg.send_msg(c._main, sys.stdin.readline())

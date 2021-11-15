@@ -14,10 +14,7 @@ except ModuleNotFoundError:
  
 
 
-ret = tg.connect()
-if ret == None:
-    sys.exit("Could not connect to the plugin")
-main, event = ret
+c = tg.Connection()
 
 
 PAGESIZE = 30
@@ -26,84 +23,84 @@ PAGESIZE = 30
 
 
 
-a, t = tg.activity(main)
+a = tg.Activity(c)
 
-root = tg.createlinearlayout(main, a)
+root = tg.LinearLayout(a)
 
-bar = tg.createlinearlayout(main, a, root, False)
-tg.setlinearlayoutparams(main, a, bar, 0)
-tg.setheight(main, a, bar, "WRAP_CONTENT")
+bar = tg.LinearLayout(a, root, False)
+bar.setlinearlayoutparams(0)
+bar.setheight("WRAP_CONTENT")
 
-upgrade = tg.createbutton(main, a, "upgrade", bar)
-tg.setheight(main, a, upgrade, "WRAP_CONTENT")
+upgrade = tg.Button(a, "upgrade", bar)
+upgrade.setheight("WRAP_CONTENT")
 
-apply = tg.createbutton(main, a, "apply", bar)
-tg.setheight(main, a, apply, "WRAP_CONTENT")
-
-
-filterlayout = tg.createlinearlayout(main, a, root, False)
-tg.setheight(main, a, filterlayout, "WRAP_CONTENT")
-tg.setlinearlayoutparams(main, a, filterlayout, 0)
-
-filtertext = tg.createedittext(main, a, "", filterlayout, True)
-
-filterbutton = tg.createbutton(main, a, "filter", filterlayout)
-tg.setwidth(main, a, filterbutton, "WRAP_CONTENT")
-tg.setlinearlayoutparams(main, a, filterbutton, 0)
+apply = tg.Button(a, "apply", bar)
+apply.setheight("WRAP_CONTENT")
 
 
+filterlayout = tg.LinearLayout(a, root, False)
+filterlayout.setheight("WRAP_CONTENT")
+filterlayout.setlinearlayoutparams(0)
 
+filtertext = tg.EditText(a, "", filterlayout, True)
 
-bar2 = tg.createlinearlayout(main, a, root, False)
-tg.setlinearlayoutparams(main, a, bar2, 0)
-tg.setheight(main, a, bar2, "WRAP_CONTENT")
-
-installbox = tg.createcheckbox(main, a, "install", True, bar2)
-tg.setheight(main, a, installbox, "WRAP_CONTENT")
-tg.setlinearlayoutparams(main, a, installbox, 0)
-tg.setmargin(main, a, installbox, 30, "right")
-
-
-prevpage = tg.createbutton(main, a, "-", bar2)
-tg.setwidth(main, a, prevpage, "WRAP_CONTENT")
-tg.setlinearlayoutparams(main, a, prevpage, 0)
-
-page = tg.createtextview(main, a, "0/", bar2)
-tg.setwidth(main, a, page, "WRAP_CONTENT")
-tg.setlinearlayoutparams(main, a, page, 0)
-tg.setmargin(main, a, page, 5)
-
-nextpage = tg.createbutton(main, a, "+", bar2)
-tg.setwidth(main, a, nextpage, "WRAP_CONTENT")
-tg.setlinearlayoutparams(main, a, nextpage, 0)
+filterbutton = tg.Button(a, "filter", filterlayout)
+filterbutton.setwidth("WRAP_CONTENT")
+filterbutton.setlinearlayoutparams(0)
 
 
 
 
+bar2 = tg.LinearLayout(a, root, False)
+bar2.setlinearlayoutparams(0)
+bar2.setheight("WRAP_CONTENT")
 
-packages = tg.createlinearlayout(main, a, root, False)
-tg.setlinearlayoutparams(main, a, packages, 3)
-tg.setheight(main, a, packages, 0)
-tg.setmargin(main, a, packages, 10, "top")
-
-availablescroll = tg.createnestedscrollview(main, a, packages)
-tg.setwidth(main, a, availablescroll, 0)
-
-available = tg.createlinearlayout(main, a, availablescroll)
+installbox = tg.Checkbox(a, "install", bar2, True)
+installbox.setheight("WRAP_CONTENT")
+installbox.setlinearlayoutparams( 0)
+installbox.setmargin(30, "right")
 
 
-selectedscroll = tg.createnestedscrollview(main, a, packages)
-tg.setwidth(main, a, selectedscroll, 0)
+prevpage = tg.Button(a, "-", bar2)
+prevpage.setwidth("WRAP_CONTENT")
+prevpage.setlinearlayoutparams(0)
 
-selected = tg.createlinearlayout(main, a, selectedscroll)
+page = tg.TextView(a, "0/", bar2)
+page.setwidth("WRAP_CONTENT")
+page.setlinearlayoutparams( 0)
+page.setmargin(5)
+
+nextpage = tg.Button(a, "+", bar2)
+nextpage.setwidth("WRAP_CONTENT")
+nextpage.setlinearlayoutparams(0)
+
+
+
+
+
+packages = tg.LinearLayout(a, root, False)
+packages.setlinearlayoutparams(3)
+packages.setheight( 0)
+packages.setmargin(10, "top")
+
+availablescroll = tg.NestedScrollView(a, packages)
+availablescroll.setwidth(0)
+
+available = tg.LinearLayout(a, availablescroll)
+
+
+selectedscroll = tg.NestedScrollView(a, packages)
+selectedscroll.setwidth(0)
+
+selected = tg.LinearLayout(a, selectedscroll)
 
 
 cpage = 1
 
-infos = tg.createnestedscrollview(main, a, root)
-tg.setheight(main, a, infos, 0)
-tg.setmargin(main, a, infos, 5, "top")
-infostext = tg.createtextview(main, a, "", infos)
+infos = tg.NestedScrollView(a, root)
+infos.setheight(0)
+infos.setmargin(5, "top")
+infostext = tg.TextView(a, "", infos)
 
 
 pkglist=[]
@@ -126,63 +123,61 @@ update()
 def displaypage(p):
     global cpage
     cpage = p
-    tg.settext(main, a, page, f"{p}/{ceil(len(pkglist)/PAGESIZE)}")
-    tg.clearchildren(main, a, available)
+    page.settext(f"{p}/{ceil(len(pkglist)/PAGESIZE)}")
+    available.clearchildren()
     l = pkglist[p*PAGESIZE-PAGESIZE:p*PAGESIZE]
     for p in l:
-        tg.createbutton(main, a, p, available)
+        tg.Button(a, p, available)
 displaypage(1)
 
 
 
 def closeconnection():
-    main.close()
-    event.close()
+    c.close()
 
 
 
 def showinfo(pkg):
-    tg.settext(main, a, infostext, subprocess.check_output(["apt", "show", pkg],stderr=subprocess.DEVNULL).decode("ascii"))
+    infostext.settext(subprocess.check_output(["apt", "show", pkg],stderr=subprocess.DEVNULL).decode("ascii"))
 
 
 
 
-while True:
-    ev = tg.getevent(event)
-    if ev["type"] == "destroy" and ev["value"]["finishing"]:
-        tg.totermux()
+for ev in c.events():
+    if ev.type == "destroy" and ev.value["finishing"]:
+        c.totermux()
         sys.exit()
-    if ev["type"] == "click" and ev["value"]["id"] == installbox:
-        install = ev["value"]["set"]
+    if ev.type == "click" and ev.value["id"] == installbox:
+        install = ev.value["set"]
         update()
-        tg.clearchildren(main, a, selected)
+        selected.clearchildren()
         selectedpkg=[]
         selectedids=[]
         displaypage(1)
         continue
-    if ev["type"] == "click" and ev["value"]["id"] == prevpage:
+    if ev.type == "click" and ev.value["id"] == prevpage:
         if cpage > 1:
             displaypage(cpage-1)
         continue
-    if ev["type"] == "click" and ev["value"]["id"] == nextpage:
+    if ev.type == "click" and ev.value["id"] == nextpage:
         if cpage < ceil(len(pkglist)/PAGESIZE):
             displaypage(cpage+1)
         continue
-    if ev["type"] == "click" and ev["value"]["id"] == upgrade:
-        tg.totermux()
+    if ev.type == "click" and ev.value["id"] == upgrade:
+        c.totermux()
         closeconnection()
         os.execlp("pkg", "pkg", "upgrade")
         continue
-    if ev["type"] == "click" and ev["value"]["id"] == filterbutton:
+    if ev.type == "click" and ev.value["id"] == filterbutton:
         update()
-        text = tg.gettext(main, a, filtertext)
+        text = filtertext.gettext()
         r = re.compile("^"+text)
         pkglist = list(filter(lambda p: r.match(p) , pkglist))
         displaypage(1)
         continue
-    if ev["type"] == "click" and ev["value"]["id"] == apply:
+    if ev.type == "click" and ev.value["id"] == apply:
         if len(selectedpkg) != 0:
-            tg.totermux()
+            c.totermux()
             closeconnection()
             if install:
                 selectedpkg.insert(0,"install")
@@ -193,16 +188,17 @@ while True:
             sys.stdout.flush()
             os.execvp("pkg", selectedpkg)
         continue
-    if ev["type"] == "click":
-        pkg = tg.gettext(main, a, ev["value"]["id"])
-        if ev["value"]["id"] in selectedids:
-            selectedids.remove(ev["value"]["id"])
+    if ev.type == "click":
+        pkgview = tg.View(a, ev.value["id"])
+        pkg = tg.TextView.gettext(pkgview)
+        if ev.value["id"] in selectedids:
+            selectedids.remove(ev.value["id"])
             selectedpkg.remove(pkg)
-            tg.deleteview(main, a, ev["value"]["id"])
+            tg.View.delete(pkgview)
             continue
         if pkg in pkglist:
             if pkg not in selectedpkg:
-                selectedids.append(tg.createbutton(main, a, pkg, selected))
+                selectedids.append(tg.Button(a, pkg, selected).id)
                 selectedpkg.append(pkg)
                 showinfo(pkg)
         
