@@ -1,0 +1,196 @@
+#!/usr/bin/env python3
+
+import sys
+import json
+import argparse
+
+try:
+    import termuxgui as tg
+except ModuleNotFoundError:
+    sys.exit("termuxgui module not found. Please install the Termux:GUI python bindings: https://github.com/tareksander/termux-gui-python-bindings") 
+
+
+
+parser = argparse.ArgumentParser(description="Display a dialog and get the user input as a JSON array. Specify the wanted input options after the options. In case the options can't be parsed the exit status is 1. If the user cancels the dialog the exit status is 2", epilog="""
+Available input options:\n
+\n
+label TEXT: Not an input option, it just displays TEXT as a literal text.\n
+\n
+text TYPE: Displays an input field. Possible TYPEs: "text", "textMultiLine", "phone", "date", "time", "datetime", "number", "numberDecimal", "numberPassword", "numberSigned", "numberDecimalSigned", "textEmailAddress", "textPassword".\n
+\n
+switch TEXT [true]: Displays a switch with TEXT as text that can be turned on or off. If true is specified it will be set from the start.\n
+\n
+checkbox TEXT [true]: Displays a checkbox with TEXT as text that can be turned on or off. If true is specified it will be set from the start.\n
+\n
+radio NUMBER TEXT1 TEXT2... TEXT<NUMBER> <SET> : Displays NUMBER radio buttons with TEXT1 to TEXT<NUMBER> as text. Only one can be set at a time. At the start no Button is set. In that case 0 will be returned. Otherwise the index of the button will be returned, starting at one. SET can be an index to set a button from the start.\n
+\n
+spinner NUMBER TEXT1 TEXT2... TEXT<NUMBER> : Displays a Spinner with NUMBER items. At the start the first one is selected. Return value for this is the text of the selected item.\n
+""", formatter_class=argparse.RawTextHelpFormatter)
+parser.add_argument("--title", nargs="?", dest="title", default="Input dialog", help="Optional dialog title text.")
+parser.add_argument("--title-size", type=int, nargs="?", dest="titlesize", default= 30, help="Size of the title text in dp.")
+parser.add_argument("--cancel-outside", dest="canceloutside", default=True, action=argparse.BooleanOptionalAction, help="Sets whether the dialog is cancelled when the user clicks outside. The dialog is still cancelled when the user navigates away.")
+
+
+args, rest = parser.parse_known_args()
+
+inputtypes = ["text", "textMultiLine", "phone", "date", "time", "datetime", "number", "numberDecimal", "numberPassword", "numberSigned", "numberDecimalSigned", "textEmailAddress", "textPassword"]
+
+# parse arguments
+
+if len(rest) == 0:
+    print("You must supply input options.\n\n",file=sys.stderr)
+    parser.print_help()
+    sys.exit(1)
+
+
+with tg.Connection() as c:
+    
+    a = tg.Activity(c, dialog=True, canceloutside=args.canceloutside)
+    root = tg.NestedScrollView(a)
+    layout = tg.LinearLayout(a, root)
+    layout.setmargin(5)
+    
+    title = tg.TextView(a, args.title, layout)
+    title.setmargin(10)
+    title.settextsize(args.titlesize)
+    
+    inputs = []
+    
+    
+    
+    try:
+        i = 0
+        while i < len(rest):
+            if rest[i] == "label":
+                i += 1
+                tg.TextView(a, rest[i], layout)
+                i += 1
+                continue
+            if rest[i] == "text":
+                i += 1
+                inputtype = rest[i]
+                if not inputtype in inputtypes:
+                    print("Invalid input type for text field.\n\n",file=sys.stderr)
+                    parser.print_help()
+                    sys.exit(1)
+                inputs.append(tg.EditText(a, "", layout, inputtype=inputtype))
+                i += 1
+                continue
+            if rest[i] == "switch":
+                i += 1
+                text = rest[i]
+                i += 1
+                checked = False
+                if i < len(rest):
+                    if rest[i] == "true":
+                        i += 1
+                        checked = True
+                inputs.append(tg.Switch(a, text, layout, checked=checked))
+                continue
+            if rest[i] == "checkbox":
+                i += 1
+                text = rest[i]
+                i += 1
+                checked = False
+                if i < len(rest):
+                    if rest[i] == "true":
+                        i += 1
+                        checked = True
+                inputs.append(tg.Checkbox(a, text, layout, checked=checked))
+                continue
+            if rest[i] == "radio":
+                i += 1
+                num = 1
+                try:
+                    num = int(rest[i])
+                    i += 1
+                    if num < 1:
+                        raise ValueError()
+                except ValueError:
+                    print("The number of radio buttons has to be a positive integer.\n\n",file=sys.stderr)
+                    parser.print_help()
+                    sys.exit(1)
+                rglayout = tg.RadioGroup(a, layout)
+                rglayout.selected = 0
+                rg = []
+                for n in range(0, num):
+                    rg.append(tg.RadioButton(a, rest[i], rglayout))
+                    i += 1
+                try:
+                    sel = int(rest[i]) - 1
+                    rg[sel].setchecked(True)
+                    rglayout.selected = sel+1
+                    i += 1
+                except:
+                    pass
+                inputs.append((rglayout, rg))
+                continue
+            if rest[i] == "spinner":
+                i += 1
+                num = 1
+                try:
+                    num = int(rest[i])
+                    i += 1
+                    if num < 1:
+                        raise ValueError()
+                except ValueError:
+                    print("The number of spinner entries has to be a positive integer.\n\n",file=sys.stderr)
+                    parser.print_help()
+                    sys.exit(1)
+                if i+num > len(rest):
+                    raise IndexError()
+                s = tg.Spinner(a, layout)
+                s.setlist(rest[i:i+num])
+                i += num
+                inputs.append(s)
+                continue
+            print("Unrecognized input option.\n\n",file=sys.stderr)
+            parser.print_help()
+            sys.exit(1)
+    except IndexError:
+        print("Expected more values.\n\n",file=sys.stderr)
+        parser.print_help()
+        sys.exit(1)
+    
+    
+    buttons = tg.LinearLayout(a, layout, vertical=False)
+    submit = tg.Button(a, "Submit", buttons)
+    cancel = tg.Button(a, "Cancel", buttons)
+    
+    
+    def viewtoret(v):
+        if type(v) == tg.EditText:
+            return v.gettext()
+        if type(v) == tg.Switch:
+            return v.checked
+        if type(v) == tg.Checkbox:
+            return v.checked
+        if type(v) == tuple:
+            return v[0].selected
+        if type(v) == tg.Spinner:
+            return v.selected
+    
+    
+    
+    
+    for ev in c.events():
+        for v in inputs:
+            if isinstance(v, tg.CompoundButton):
+                v.handleevent(ev)
+            if type(v) == tuple and ev.type == tg.Event.selected and ev.id == v[0].id:
+                try:
+                    v[0].selected = v[1].index(ev.value["selected"]) + 1
+                except ValueError:
+                    print("value error")
+                    pass
+            if ev.type == tg.Event.itemselected and ev.id == v:
+                v.selected = ev.value["selected"]
+        if ev.type == tg.Event.destroy and ev.value["finishing"] == True:
+            sys.exit(2)
+        if ev.type == tg.Event.click and ev.id == cancel:
+            sys.exit(2)
+        if ev.type ==tg.Event.click and ev.id == submit:
+            ret = list(map(viewtoret, inputs))
+            print(json.dumps(ret))
+            sys.exit(0)
+        
