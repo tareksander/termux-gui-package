@@ -19,7 +19,7 @@ try:
 except ModuleNotFoundError:
     print("Could not find PIL. If you want support for more file types, please install pillow with pip install pillow. If you have a 64bit device, use export LDFLAGS=\"-L/system/lib64\" before that.")
 
-parser = argparse.ArgumentParser(description="View images in a picture-in-picture window.\nYou should probably make a shell alias with all the options you want configured.")
+parser = argparse.ArgumentParser(description="View images in a picture-in-picture window.\n\nYou should probably make a shell alias with all the options you want configured.")
 parser.add_argument("file", nargs="+", type=argparse.FileType('rb'), help="The files you want to view. If more than one, they are displayed after each other.")
 parser.add_argument("-n", type=float, default=5.0, help="The time in seconds each image should be shown. The default is 5.")
 parser.add_argument("--return", dest="ret", default=True, action=argparse.BooleanOptionalAction, help="Use this if you don't want the program to return to Termux after all images are displayed.")

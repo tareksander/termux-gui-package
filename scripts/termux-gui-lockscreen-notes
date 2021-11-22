@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+
+import argparse
+import sys
+import io
+
+try:
+    import termuxgui as tg
+except ModuleNotFoundError:
+    sys.exit("termuxgui module not found. Please install the Termux:GUI python bindings: https://github.com/tareksander/termux-gui-python-bindings")
+
+parser = argparse.ArgumentParser(description="Write notes on the lockscreen and have them saved in a file.")
+parser.add_argument("file", help="The file where the notes will be written. If the file exists, the contents will be overwritten.")
+parser.add_argument("--append", dest="append", default=False, action=argparse.BooleanOptionalAction, help="If you use this option, the file contents aren't cleared, the notes are appended at the end.")
+
+args = parser.parse_args()
+
+if args.append:
+    f = io.open(args.file, "a")
+    f.write("\n")
+else:
+    f = io.open(args.file, "w")
+
+with tg.Connection() as c:
+    
+    a = tg.Activity(c, lockscreen=True) 
+    
+    l = tg.LinearLayout(a)
+    
+    submit = tg.Button(a, "Save", l)
+    submit.setheight("WRAP_CONTENT")
+    submit.setlinearlayoutparams(0)
+    
+    edit = tg.EditText(a, "", l)
+    
+    for ev in c.events():
+        if ev.type == tg.Event.destroy and ev.value["finishing"]:
+            sys.exit()
+        if ev.type == tg.Event.click and ev.id == submit:
+            f.write(edit.gettext())
+            f.write("\n")
+            edit.settext("")

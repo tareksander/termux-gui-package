@@ -21,8 +21,6 @@ PAGESIZE = 30
 
 
 
-
-
 a = tg.Activity(c)
 
 root = tg.LinearLayout(a)
@@ -103,6 +101,14 @@ infos.setmargin(5, "top")
 infostext = tg.TextView(a, "", infos)
 
 
+lastpagesize = 0
+pagebuttons = []
+for i in range(0, PAGESIZE):
+    b = tg.Button(a, "", available)
+    b.setvisibility(0)
+    pagebuttons.append(b)
+
+
 pkglist=[]
 selectedpkg=[]
 selectedids=[]
@@ -122,12 +128,18 @@ update()
 
 def displaypage(p):
     global cpage
+    global lastpagesize
     cpage = p
     page.settext(f"{p}/{ceil(len(pkglist)/PAGESIZE)}")
-    available.clearchildren()
     l = pkglist[p*PAGESIZE-PAGESIZE:p*PAGESIZE]
-    for p in l:
-        tg.Button(a, p, available)
+    for i, p in enumerate(l):
+        pagebuttons[i].settext(p)
+        if (i >= lastpagesize):
+            pagebuttons[i].setvisibility(2)
+    for i in range(len(l), PAGESIZE):
+        if (i < lastpagesize):
+            pagebuttons[i].setvisibility(0)
+    lastpagesize = len(l)
 displaypage(1)
 
 
