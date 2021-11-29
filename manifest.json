@@ -6,11 +6,12 @@
   "arch": "all",
   "depends": [],
   "files" :{
-    "man/termux-gui-shell.1.gz": "usr/share/man/man1/termux-gui-shell.1.gz",
+    "man/termux-gui-shell.1.gz": "share/man/man1/termux-gui-shell.1.gz",
     "scripts/termux-gui-dialog": "bin/termux-gui-dialog",
     "scripts/termux-gui-pkg": "bin/termux-gui-pkg",
     "scripts/termux-gui-shell": "bin/termux-gui-shell",
     "scripts/termux-gui-view": "bin/termux-gui-view",
+    "scripts/termux-gui-view": "bin/termux-gui-files",
     "scripts/termux-gui-lockscreen-notes": "bin/termux-gui-lockscreen-notes"
   }
 }
