@@ -7,7 +7,7 @@ set(manpages termux-gui-shell)
 
 foreach(manpage ${manpages})
     execute_process(COMMAND gzip -k man/${manpage}.1)
-    install(FILES man/${manpage} TYPE MAN)
+    install(FILES man/${manpage}.1.gz TYPE MAN)
 endforeach()
 
 set(icons files)
