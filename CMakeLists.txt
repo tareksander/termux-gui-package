@@ -11,7 +11,7 @@ set(files dialog files lockscreen-notes pkg shell view)
 
 foreach(file ${files})
     configure_file(scripts/termux-gui-${file}.in scripts/termux-gui-${file} @ONLY)
-    install(PROGRAMS scripts/termux-gui-${file} DESTINATION bin)
+    install(PROGRAMS scripts/termux-gui-${file} TYPE BIN)
 endforeach()
 
 
