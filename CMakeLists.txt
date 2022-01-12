@@ -1,6 +1,15 @@
 cmake_minimum_required(VERSION 3.18)
 project(termux-gui-package)
 
+
+set(manpages termux-gui-shell)
+
+
+foreach(manpage ${manpages})
+    execute_process(COMMAND gzip -k man/${manpage}.1)
+    install(FILES man/${manpage} TYPE MAN)
+endforeach()
+
 set(icons files)
 
 foreach(icon ${icons})
