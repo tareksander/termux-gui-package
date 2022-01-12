@@ -1,2 +1,9 @@
-man/*.gz 
-*.deb
+CMakeFiles/*
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+man/*.gz
+scripts/*
+!scripts/*.in
+
