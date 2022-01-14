@@ -16,7 +16,7 @@ except ModuleNotFoundError:
 
 
 # The icon png as a base64 encoded string, so you don't have to install it as another file
-icon = "@files-icon@"
+icon = """@files-icon@"""
 
 
 parser = argparse.ArgumentParser(description="A graphical file explorer for Termux.")

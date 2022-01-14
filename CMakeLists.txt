@@ -23,4 +23,7 @@ foreach(file ${files})
     install(PROGRAMS scripts/termux-gui-${file} TYPE BIN)
 endforeach()
 
+add_custom_target(deb termux-create-package manifest.json)
+
+
 

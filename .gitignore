@@ -3,6 +3,8 @@ CMakeCache.txt
 cmake_install.cmake
 Makefile
 
+
+*.deb
 man/*.gz
 scripts/*
 !scripts/*.in

@@ -1,0 +1,3 @@
+#!/data/data/com.termux/files/usr/bin/sh
+echo "Installing python bindings for Termux:GUI"
+pip install --upgrade termuxgui

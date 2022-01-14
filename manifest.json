@@ -1,0 +1,35 @@
+{
+    "control": {
+        "Package": "termux-gui-package",
+        "Version": "0.1.4",
+        "Architecture": "all",
+        "Maintainer": "tareksander",
+        "Depends": "python",
+        "Homepage": "https://github.com/tareksander/termux-gui-package",
+        "Description": [
+        "A Termux package containing utilities for Termux:GUI. " ]
+    },
+    "data_files": {
+        "bin/termux-gui-dialog": {
+            "source": "scripts/termux-gui-dialog"
+        },
+        "bin/termux-gui-files": {
+            "source": "scripts/termux-gui-files"
+        },
+        "bin/termux-gui-lockscreen-notes": {
+            "source": "scripts/termux-gui-lockscreen-notes"
+        },
+        "bin/termux-gui-pkg": {
+            "source": "scripts/termux-gui-pkg"
+        },
+        "bin/termux-gui-shell": {
+            "source": "scripts/termux-gui-shell"
+        },
+        "bin/termux-gui-view": {
+            "source": "scripts/termux-gui-view"
+        },
+        "share/man/man1/termux-gui-shell.1.gz": {
+            "source": "man/termux-gui-shell.1.gz"
+        }
+    }
+}
