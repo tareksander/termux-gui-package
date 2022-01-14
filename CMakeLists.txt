@@ -7,7 +7,7 @@ set(manpages termux-gui-shell)
 
 foreach(manpage ${manpages})
     execute_process(COMMAND gzip -k man/${manpage}.1)
-    install(FILES man/${manpage}.1.gz DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
+    install(FILES man/${manpage}.1.gz DESTINATION ${CMAKE_INSTALL_PREFIX}/man/man1)
 endforeach()
 
 set(icons files)
