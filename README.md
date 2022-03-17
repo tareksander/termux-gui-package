@@ -14,7 +14,5 @@ Current list of programs:
 
 # Installation
 
-To install download a .deb from the [releases](https://github.com/tareksander/termux-gui-package/releases) and install it with ``apt install ./file.deb``.  
-Once Termux:GUI hits version 1.0 or is available on f-droid, I will try to make it available in the main Termux repo for automatic updates.
-
+Use `pkg install termux-gui-package` in Termux.
 
