@@ -45,7 +45,7 @@ def display():
                 with file:
                     with Image.open(file) as img:
                         a.setpipparams(img.width, img.height)
-                        for frame in range(0, img.n_frames):
+                        for frame in range(0, getattr(img, "n_frames", 1)):
                             ftime = time.time()
                             if send:
                                 b.seek(0)
