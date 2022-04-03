@@ -1,0 +1,57 @@
+#!/data/data/com.termux/files/usr/bin/env python3
+
+import sys
+import time
+import argparse
+import re
+
+try:
+	import termuxgui as tg
+except ModuleNotFoundError:
+	sys.exit("termuxgui module not found. Please install the Termux:GUI python bindings: https://github.com/tareksander/termux-gui-python-bindings")
+
+parser = argparse.ArgumentParser(description="Display a menu with entries from the lines of stdin and output the selected line.")
+args = parser.parse_known_args()
+
+with tg.Connection() as c:
+    a = tg.Activity(c, dialog=True)
+    root = tg.LinearLayout(a)
+    root.setdimensions("wrap_content", "wrap_content")
+    space = tg.Space(a, root)
+    space.setwidth(100)
+    edit = tg.EditText(a, "", root)
+    edit.setdimensions("wrap_content", 80)
+    edit.sendtextevent(True)
+    
+    sv = tg.NestedScrollView(a, root)
+    sv.setdimensions("wrap_content", "wrap_content")
+    entriesl = tg.LinearLayout(a, sv)
+    entries=[]
+    buttons=[]
+    
+    try:
+        for l in sys.stdin:
+            entries.append(l.rstrip('\n'))
+            buttons.append(tg.Button(a, l.rstrip('\n'), entriesl))
+        edit.focus(True)
+        while True:
+            e = c.checkevent()
+            if e != None:
+                if e.type == tg.Event.destroy:
+                    sys.exit(1)
+                if e.type == tg.Event.text:
+                    esc = re.escape(e.value["text"])
+                    for i in range(0, len(entries)):
+                        if re.search(esc, entries[i]) != None:
+                            buttons[i].setvisibility(2)
+                        else:
+                            buttons[i].setvisibility(0)
+                if e.type == tg.Event.click:
+                    for i in range(0, len(entries)):
+                        if e.id == buttons[i]:
+                            print(entries[i])
+                            sys.exit(0)
+            time.sleep(0.001)
+    except KeyboardInterrupt:
+        print()
+        sys.exit(1)

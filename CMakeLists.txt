@@ -16,7 +16,7 @@ foreach(icon ${icons})
     execute_process(COMMAND base64 OUTPUT_VARIABLE ${icon}-icon INPUT_FILE icons/${icon}.png)
 endforeach()
 
-set(files dialog files lockscreen-notes pkg shell view)
+set(files dialog files lockscreen-notes pkg shell view dmenu)
 
 foreach(file ${files})
     configure_file(scripts/termux-gui-${file}.in scripts/termux-gui-${file} @ONLY)
