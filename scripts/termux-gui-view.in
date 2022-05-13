@@ -9,7 +9,7 @@ import threading
 try:
     import termuxgui as tg
 except ModuleNotFoundError:
-    sys.exit("termuxgui module not found. Please install the Termux:GUI python bindings: https://github.com/tareksander/termux-gui-python-bindings")
+    sys.exit("termuxgui module not found. Please install the Termux:GUI python bindings: @bindings-url@")
 
 pilfound = False
 

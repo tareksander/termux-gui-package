@@ -1,0 +1,408 @@
+#!/data/data/com.termux/files/usr/bin/env python3
+
+import sys
+import argparse
+import subprocess
+import os
+import re
+from pathlib import Path
+import base64
+import shlex
+import tempfile
+import io
+
+try:
+    import termuxgui as tg
+except ModuleNotFoundError:
+    sys.exit("termuxgui module not found. Please install the Termux:GUI python bindings: @bindings-url@")
+
+
+# The icon png as a base64 encoded string, so you don't have to install it as another file
+icon = """@distro-icon@"""
+alpine_icon="""@distro-alpine-icon@"""
+arch_icon="""@distro-arch-icon@"""
+debian_icon="""@distro-debian-icon@"""
+fedora_icon="""@distro-fedora-icon@"""
+manjaro_icon="""@distro-manjaro-icon@"""
+suse_icon="""@distro-tumbleweed-icon@"""
+ubuntu_icon="""@distro-ubuntu-icon@"""
+void_icon="""@distro-void-icon@"""
+
+
+alpine = "alpine"
+arch = "archlinux"
+debian = "debian"
+fedora = "fedora"
+manjaro = "manjaro-aarch64"
+suse = "opensuse"
+ubuntu = "ubuntu"
+void = "void"
+
+icons = {
+    alpine: alpine_icon,
+    arch: arch_icon,
+    debian: debian_icon,
+    fedora: fedora_icon,
+    manjaro: manjaro_icon,
+    suse: suse_icon,
+    ubuntu: ubuntu_icon,
+    void: void_icon
+}
+
+
+prefix = "/data/data/com.termux/files/usr"
+
+plugindir = f"{prefix}/etc/proot-distro"
+runtimedir = f"{prefix}/var/lib/proot-distro"
+dlcachedir = f"{runtimedir}/dlcache"
+installdir = f"{runtimedir}/installed-rootfs"
+
+
+parser = argparse.ArgumentParser(description="A graphical frontend for proot-distro.")
+args = parser.parse_args()
+
+
+distros = []
+names = []
+
+nameregex = "(?<=DISTRO_NAME=\")([^\n]+)(?=\")"
+
+
+for plugin in Path(plugindir).iterdir():
+    if plugin.suffix == ".sh":
+        with plugin.open() as f:
+            m = re.search(nameregex, f.read())
+            if m != None:
+                distros.append(plugin.stem)
+                names.append(m.group(1))
+
+
+def FSUsage(path):
+    usage = 0
+    for root, dirs, files in os.walk(path):
+        for f in files:
+            try:
+                usage += os.path.getsize(os.path.join(root, f))
+            except:
+                pass
+    return usage
+
+def humanSize(size):
+    postfixes = [" KiB", " MiB", " GiB"]
+    post = " B"
+    for postfix in postfixes:
+        if size / 1024 >= 1:
+            size /= 1024
+            post = postfix
+        else:
+            break
+    return str(round(size, 1)) + post
+
+
+
+def distroScreen(c, d, maina):
+    a = tg.Activity(c, tid=maina.t.tid)
+    
+    l = tg.LinearLayout(a)
+    l.setmargin(5)
+    
+    top = tg.LinearLayout(a, l, vertical=False)
+    top.setlinearlayoutparams(0)
+    top.setheight("WRAP_CONTENT")
+    
+    dname = names[distros.index(d)]
+    
+    title = tg.TextView(a, dname, top)
+    title.settextsize(20)
+    
+    top.setmargin(10, "bottom")
+    
+    if d in icons:
+        width = 0
+        height = 0
+        while width == 0:
+            width, height = title.getdimensions()
+        title.setlinearlayoutparams(1)
+        img = tg.ImageView(a, top)
+        img.setwidth(width/2, px=True)
+        img.setheight(height*2, px=True)
+        img.setlinearlayoutparams(0)
+        img.setimage(base64.standard_b64decode(icons[d]))
+    
+    
+    installed = False
+    
+    status = tg.TextView(a, "Status:", l)
+    status.setlinearlayoutparams(0)
+    status.setheight("WRAP_CONTENT")
+    
+    statusl = tg.LinearLayout(a, l)
+    statusl.setlinearlayoutparams(0)
+    statusl.setheight("WRAP_CONTENT")
+    statusl.setmargin(5)
+    statusl.setmargin(10, "left")
+    
+    ins = tg.TextView(a, "", statusl)
+    
+    fsusage = tg.TextView(a, "", statusl)
+    
+    def updateFSUsage():
+            fsusage.settext("Filesystem usage: " + humanSize(FSUsage(os.path.join(installdir, d))))
+    
+    login = tg.Button(a, "login", l)
+    login.setlinearlayoutparams(0)
+    login.setheight("WRAP_CONTENT")
+    
+    
+    install = tg.Button(a, "install", l)
+    install.setlinearlayoutparams(0)
+    install.setheight("WRAP_CONTENT")
+    
+    dangerz = tg.TextView(a, "Danger zone:", l)
+    dangerz.setlinearlayoutparams(0)
+    dangerz.setheight("WRAP_CONTENT")
+    dangerz.setmargin(30, "top")
+    
+    dangerzl = tg.LinearLayout(a, l)
+    dangerzl.setlinearlayoutparams(0)
+    dangerzl.setheight("WRAP_CONTENT")
+    
+    reset = tg.Button(a, "Reset", dangerzl)
+    reset.settextcolor(0xffff0000)
+    
+    uninstall = tg.Button(a, "Uninstall", dangerzl)
+    uninstall.settextcolor(0xffff0000)
+    
+    
+    def checkInstalled():
+        nonlocal installed
+        installed = os.path.isdir(os.path.join(os.path.join(installdir, d), "bin"))
+        if installed:
+            ins.settext("installed")
+            ins.settextcolor(0xff00ff00)
+            install.setvisibility(0)
+            fsusage.setvisibility(2)
+            login.setvisibility(2)
+            dangerz.setvisibility(2)
+            dangerzl.setvisibility(2)
+            updateFSUsage()
+        else:
+            ins.settext("not installed")
+            ins.settextcolor(0xffff0000)
+            fsusage.setvisibility(0)
+            login.setvisibility(0)
+            dangerz.setvisibility(0)
+            dangerzl.setvisibility(0)
+            install.setvisibility(2)
+    
+    checkInstalled()
+    
+    
+    def resetDialog():
+        a = tg.Activity(c, dialog=True)
+        
+        l = tg.LinearLayout(a)
+        l.setmargin(5)
+        
+        
+        title = tg.TextView(a, f"Do you really want to reset {dname}? All files in the distro will be lost.", l)
+        title.settextsize(18)
+        title.setmargin(10, "bottom")
+        
+        ll = tg.LinearLayout(a, l, vertical=False)
+        
+        cancel = tg.Button(a, "No", ll)
+        cancel.setwidth("WRAP_CONTENT")
+        cancel.setmargin(50, "right")
+        
+        ok = tg.Button(a, "Yes", ll)
+        ok.setwidth("WRAP_CONTENT")
+        
+        
+        for e in c.events():
+            if hasattr(e, "aid"):
+                if e.type == tg.Event.destroy and e.aid == maina.aid:
+                    sys.exit(0)
+                if e.type == tg.Event.destroy and e.aid == a.aid:
+                    return
+                if e.type == tg.Event.click and e.aid == a.aid:
+                    if e.id == ok:
+                        pipefile = tempfile.mktemp(suffix="termux-gui-proot-distro-reset")
+                        os.mkfifo(pipefile)
+                        qd = shlex.quote(d)
+                        qp = shlex.quote(pipefile)
+                        subprocess.run([
+                            "am", "startservice",
+                            "-n", "com.termux/com.termux.app.RunCommandService",
+                            "-a", "com.termux.RUN_COMMAND",
+                            "--es", "com.termux.RUN_COMMAND_PATH", "/data/data/com.termux/files/usr/bin/bash",
+                            "--esa", "com.termux.RUN_COMMAND_ARGUMENTS", f"--posix,--noprofile,--norc,-c,--,trap '' SIGINT; proot-distro reset {qd}; echo 1 >> {qp}"],
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL)
+                        with io.open(pipefile, "r") as pipe:
+                            pipe.read(1)
+                        maina.t.bringtofront()
+                        a.finish()
+                        return
+                    if e.id == cancel:
+                        a.finish()
+                        return
+    
+    
+    def uninstallDialog():
+        a = tg.Activity(c, dialog=True)
+        
+        l = tg.LinearLayout(a)
+        l.setmargin(5)
+        
+        
+        title = tg.TextView(a, f"Do you really want to uninstall {dname}? All files in the distro will be lost.", l)
+        title.settextsize(18)
+        title.setmargin(10, "bottom")
+        
+        ll = tg.LinearLayout(a, l, vertical=False)
+        
+        cancel = tg.Button(a, "No", ll)
+        cancel.setwidth("WRAP_CONTENT")
+        cancel.setmargin(50, "right")
+        
+        ok = tg.Button(a, "Yes", ll)
+        ok.setwidth("WRAP_CONTENT")
+        
+        
+        for e in c.events():
+            if hasattr(e, "aid"):
+                if e.type == tg.Event.destroy and e.aid == maina.aid:
+                    sys.exit(0)
+                if e.type == tg.Event.destroy and e.aid == a.aid:
+                    return
+                if e.type == tg.Event.click and e.aid == a.aid:
+                    if e.id == ok:
+                        subprocess.run(["rm", "-rf", os.path.join(installdir, d)])
+                        a.finish()
+                        checkInstalled()
+                        return
+                    if e.id == cancel:
+                        a.finish()
+                        return
+    
+    
+    for e in c.events():
+        if hasattr(e, "aid"):
+            if e.type == tg.Event.destroy and e.aid == maina.aid:
+                sys.exit(0)
+            if e.aid == a.aid:
+                if e.type == tg.Event.destroy:
+                    return
+                if e.type == tg.Event.resume:
+                    checkInstalled()
+                if e.type == tg.Event.click:
+                    if e.id == install and not installed:
+                        pipefile = tempfile.mktemp(suffix="termux-gui-proot-distro-install")
+                        os.mkfifo(pipefile)
+                        qd = shlex.quote(d)
+                        qp = shlex.quote(pipefile)
+                        subprocess.run([
+                            "am", "startservice",
+                            "-n", "com.termux/com.termux.app.RunCommandService",
+                            "-a", "com.termux.RUN_COMMAND",
+                            "--es", "com.termux.RUN_COMMAND_PATH", "/data/data/com.termux/files/usr/bin/bash",
+                            "--esa", "com.termux.RUN_COMMAND_ARGUMENTS", f"--posix,--noprofile,--norc,-c,--,trap '' SIGINT; proot-distro install {qd}; echo 1 >> {qp}",
+                            "--es", "RUN_COMMAND_SERVICE.EXTRA_RESULT_DIRECTORY", "/data/data/com.termux/files/usr/tmp",
+                            "--ez", "com.termux.RUN_COMMAND_RESULT_SINGLE_FILE", "true",
+                            "--es", "RUN_COMMAND_SERVICE.EXTRA_RESULT_FILE_BASENAME", "proot-distro-gui-install-log"],
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL)
+                        with io.open(pipefile, "r") as pipe:
+                            pipe.read(1)
+                        maina.t.bringtofront()
+                    if e.id == login and installed:
+                        pipefile = tempfile.mktemp(suffix="termux-gui-proot-distro-login")
+                        os.mkfifo(pipefile)
+                        qd = shlex.quote(d)
+                        qp = shlex.quote(pipefile)
+                        subprocess.run([
+                            "am", "startservice",
+                            "-n", "com.termux/com.termux.app.RunCommandService",
+                            "-a", "com.termux.RUN_COMMAND",
+                            "--es", "com.termux.RUN_COMMAND_PATH", "/data/data/com.termux/files/usr/bin/bash",
+                            "--esa", "com.termux.RUN_COMMAND_ARGUMENTS", f"--posix,--noprofile,--norc,-c,--,trap '' SIGINT; proot-distro login {qd}; echo 1 >> {qp}"],
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL)
+                        with io.open(pipefile, "r") as pipe:
+                            pipe.read(1)
+                        maina.t.bringtofront()
+                    if e.id == uninstall:
+                        uninstallDialog()
+                    if e.id == reset:
+                        resetDialog()
+
+
+
+def main():
+    with tg.Connection() as c:
+        a = tg.Activity(c)
+        a.settaskdescription("proot-distro-gui", icon)
+        
+        layout = tg.LinearLayout(a)
+        sv = tg.NestedScrollView(a, layout)
+        
+        l = tg.LinearLayout(a, sv)
+        ov = tg.LinearLayout(a, l)
+        ov.setmargin(25, "bottom")
+        
+        total = tg.TextView(a, "Total filesystem usage: ", ov)
+        dlcache = tg.TextView(a, "Download cache: ", ov)
+        
+        clearcache = tg.Button(a, "clear cache", ov)
+        clearcache.setlinearlayoutparams(0)
+        clearcache.setwidth("WRAP_CONTENT")
+        
+        def updateFSUsage():
+            total.settext("Total Filesystem usage: " + humanSize(FSUsage(runtimedir)))
+            
+        def updateDLCacheUsage():
+            dlcache.settext("Download cache: " + humanSize(FSUsage(dlcachedir)))
+            updateFSUsage()
+        updateDLCacheUsage()
+        
+        
+        distrobuttons = []
+        
+        for i, d in enumerate(distros):
+            line = tg.LinearLayout(a, l, vertical=False)
+            line.setmargin(10, "bottom")
+            b = tg.Button(a, names[i], line)
+            distrobuttons.append(b)
+            if d in icons:
+                width = 0
+                height = 0
+                while width == 0:
+                    width, height = b.getdimensions()
+                b.setlinearlayoutparams(1)
+                img = tg.ImageView(a, line)
+                img.setwidth(width/2, px=True)
+                img.setheight(height, px=True)
+                img.setlinearlayoutparams(0)
+                img.setimage(base64.standard_b64decode(icons[d]))
+                
+                
+        
+        
+        
+        
+        for e in c.events():
+            if e.type == tg.Event.destroy and e.aid == a.aid:
+                sys.exit(0)
+            if e.type == tg.Event.click and e.aid == a.aid:
+                if e.id == clearcache:
+                    for f in os.listdir(dlcachedir):
+                        os.remove(os.path.join(dlcachedir, f))
+                    updateDLCacheUsage()
+                    continue
+                if e.id in distrobuttons:
+                    db = distrobuttons[distrobuttons.index(e.id)]
+                    distro = distros[names.index(db.gettext())]
+                    distroScreen(c, distro, a)
+                    updateDLCacheUsage()
+main()

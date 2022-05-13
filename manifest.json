@@ -4,7 +4,7 @@
         "Version": "0.1.4",
         "Architecture": "all",
         "Maintainer": "tareksander",
-        "Depends": "python",
+        "Depends": "python, proot-distro",
         "Homepage": "https://github.com/tareksander/termux-gui-package",
         "Description": [
         "A Termux package containing utilities for Termux:GUI. " ]
@@ -27,6 +27,9 @@
         },
         "bin/termux-gui-view": {
             "source": "scripts/termux-gui-view"
+        },
+        "bin/termux-gui-proot-distro": {
+            "source": "scripts/termux-gui-proot-distro"
         },
         "share/man/man1/termux-gui-shell.1.gz": {
             "source": "man/termux-gui-shell.1.gz"

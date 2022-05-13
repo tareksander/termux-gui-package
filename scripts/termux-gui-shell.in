@@ -7,7 +7,7 @@ try:
 	import termuxgui as tg
 	import termuxgui.msg as tgmsg
 except ModuleNotFoundError:
-	sys.exit("termuxgui module not found. Please install the Termux:GUI python bindings: https://github.com/tareksander/termux-gui-python-bindings")
+	sys.exit("termuxgui module not found. Please install the Termux:GUI python bindings: @bindings-url@")
 
 
 with tg.Connection() as c:
