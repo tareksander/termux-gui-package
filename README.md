@@ -10,7 +10,9 @@ Current list of programs:
 - termux-gui-pkg: A graphical frontend for pkg.
 - termux-gui-lockscreen-notes: Write notes even from the lockscreen and save them in a file. The notes are not viewable from the lockscreen when you saved them, to see them you have to unlock your phone and open the file in termux.
 - termux-gui-files: A file explorer you can use to select files, folders and navigate in the terminal.
-
+- termux-gui-dialog: Display dialogs from the shell with customizable combinations of input options, and get the results back.
+- termux-gui-dmenu: A replacement for `dmenu`.
+- termux-gui-proot-distro: A graphical frontend for `proot-distro`.
 
 # Installation
 

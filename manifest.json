@@ -1,7 +1,7 @@
 {
     "control": {
         "Package": "termux-gui-package",
-        "Version": "0.1.4",
+        "Version": "0.1.6",
         "Architecture": "all",
         "Maintainer": "tareksander",
         "Depends": "python, proot-distro",
@@ -12,6 +12,9 @@
     "data_files": {
         "bin/termux-gui-dialog": {
             "source": "scripts/termux-gui-dialog"
+        },
+        "bin/termux-gui-dmenu": {
+            "source": "scripts/termux-gui-dmenu"
         },
         "bin/termux-gui-files": {
             "source": "scripts/termux-gui-files"
